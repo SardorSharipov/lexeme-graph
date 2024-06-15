@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 1500px;
+                 height: 1000px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "lexeme_1139", "label": "Lexeme \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_5035", "label": "Lexeme \u0430\u0430\u0440\u043e\u043d\u043e\u0432\u044a \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_8335", "label": "Lexeme \u0430\u043b\u0430\u043d\u0442\u043e\u0432\u043e\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4920", "label": "Lexeme \u0430\u043f\u0438\u043d\u0435\u043b\u0435\u0432\u044a \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4937", "label": "Lexeme \u0431\u043e\u0431\u0440\u043e\u0432\u044b\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2103", "label": "Lexeme \u0432\u0438\u043d\u043d\u044b\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4935", "label": "Lexeme \u0432\u0438\u0440\u0433\u0438\u043d\u0441\u043a\u0438\u0439 \u0437\u043c\u0463\u0438\u043d\u044b\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1934", "label": "Lexeme \u0432\u043e\u043b\u0447\u0430\u043d\u043e\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_7317", "label": "Lexeme \u0432\u043e\u043b\u0447\u0438\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2162", "label": "Lexeme \u0434\u0435\u0432\u0435\u0441\u0438\u043b\u044c\u043d\u044b\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2428", "label": "Lexeme \u0434\u044f\u0433\u0438\u043b\u0435\u0432\u044a \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1579", "label": "Lexeme \u0434\u044f\u0433\u0438\u043b\u044c\u043d\u043e\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4643", "label": "Lexeme \u0437\u043e\u043b\u043e\u0442\u043e\u0435 \u043a\u043e\u0440\u0435\u043d\u044c\u0435", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1140", "label": "Lexeme \u043a\u043e\u0440\u0435\u043d\u0438\u0435", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2037", "label": "Lexeme \u043b\u0430\u043f\u0443\u0448\u043d\u0438\u043a\u043e\u0432\u044a \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_8901", "label": "Lexeme \u043c\u0430\u0440\u044c\u0438\u043d\u044a \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4932", "label": "Lexeme \u043c\u0430\u0442\u043e\u0447\u043d\u044b\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_6309", "label": "Lexeme \u043f\u0438\u043e\u043d\u043e\u0432\u043e\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_7315", "label": "Lexeme \u0441\u0430\u0445\u0430\u0440\u043d\u044b\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1894", "label": "Lexeme \u0441\u043b\u0430\u0434\u043a\u0438\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2972", "label": "Lexeme \u0441\u043e\u043b\u043e\u0442\u043a\u043e\u0432\u044b\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1418", "label": "Lexeme \u0441\u043e\u043b\u043e\u0442\u043a\u043e\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_6792", "label": "Lexeme \u0444\u0438\u0430\u043b\u043a\u043e\u0432\u043e\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4542", "label": "Lexeme \u0444\u0438\u0430\u043b\u043a\u043e\u0432\u044a \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4074", "label": "Lexeme \u0445\u0438\u043d\u0441\u043a\u043e\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_7015", "label": "Lexeme \u0446\u0430\u0440\u0441\u043a\u0438\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_7242", "label": "Lexeme \u0446\u0438\u0446\u0432\u0430\u0440\u043d\u044b\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2024", "label": "Lexeme \u0446\u044b\u0442\u0432\u0430\u0440\u043d\u044b\u0439 \u043a\u043e\u0440\u0435\u043d\u044c", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2047", "label": "Lexeme \u0434\u0435\u0432\u0435\u0441\u0438\u043b\u044c\u043d\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_7241", "label": "Lexeme \u0446\u0438\u0446\u0432\u0430\u0440\u043d\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "etymology_766", "label": "Etymology Veilchenwurzel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_6308", "label": "Lexeme \u043f\u0438\u043e\u043d\u043e\u0432\u043e\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4931", "label": "Lexeme \u043c\u0430\u0442\u043e\u0447\u043d\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2385", "label": "Lexeme \u0441\u0430\u0445\u0430\u0440\u043d\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4934", "label": "Lexeme \u0437\u043c\u0463\u0438\u043d\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4551", "label": "Lexeme \u043b\u0430\u043f\u0443\u0448\u043d\u0438\u043a\u043e\u0432\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_5966", "label": "Lexeme \u0430\u043b\u0430\u043d\u0442\u043e\u0432\u044a", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4936", "label": "Lexeme \u0431\u043e\u0431\u0440\u043e\u0432\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1141", "label": "Lexeme \u043f\u044a\u044f\u043d\u043e\u0435 \u043a\u043e\u0440\u0435\u043d\u0438\u0435", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1322", "label": "Lexeme \u0446\u044b\u0442\u0432\u0430\u0440\u043d\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4919", "label": "Lexeme \u0430\u043f\u0438\u043d\u0435\u043b\u0435\u0432\u044a", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "etymology_765", "label": "Etymology Feilwurz", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1232", "label": "Lexeme \u0444\u0438\u0430\u043b\u043a\u043e\u0432\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1099", "label": "Lexeme \u0441\u043e\u043b\u043e\u0434\u043a\u0430", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2321", "label": "Lexeme \u0434\u044f\u0433\u0438\u043b\u044c\u043d\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_93", "label": "Lexeme \u0432\u0438\u043d\u043d\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4552", "label": "Lexeme \u0441\u043e\u043b\u043e\u0442\u043a\u043e\u0432\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1149", "label": "Lexeme \u0437\u043e\u043b\u043e\u0442\u043e", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2427", "label": "Lexeme \u0434\u044f\u0433\u0438\u043b\u0435\u0432\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_166", "label": "Lexeme \u0432\u043e\u043b\u043a\u044a", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_167", "label": "Lexeme \u0432\u043e\u043b\u0447\u0438\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_1724", "label": "Lexeme \u043e\u0431\u0440\u0430\u0442\u0438\u043c\u043e\u0432\u043e \u043a\u043e\u0440\u0435\u043d\u0438\u0435", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_3626", "label": "Lexeme \u0441\u0430\u043b\u043e\u0442\u043a\u043e\u0432\u044b\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_208", "label": "Lexeme \u0441\u043b\u0430\u0434\u043a\u0438\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_5034", "label": "Lexeme \u0430\u0430\u0440\u043e\u043d\u043e\u0432\u044a", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_4933", "label": "Lexeme \u0432\u0438\u0440\u0433\u0438\u043d\u0441\u043a\u0438\u0439", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lexeme_2780", "label": "Lexeme \u0446\u0430\u0440\u0441\u043a\u0438\u0439", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"from": "lexeme_1139", "to": "lexeme_5035", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_8335", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_4920", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_4937", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_2103", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_4935", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_1934", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_7317", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_2162", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_2428", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_1579", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_4643", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_1140", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_2037", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_8901", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_4932", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_6309", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_7315", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_1894", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_2972", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_1418", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_6792", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_4542", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_4074", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_7015", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_7242", "width": 1}, {"from": "lexeme_1139", "to": "lexeme_2024", "width": 1}, {"from": "lexeme_2162", "to": "lexeme_2047", "width": 1}, {"from": "lexeme_7241", "to": "lexeme_7242", "width": 1}, {"from": "etymology_766", "to": "lexeme_6792", "width": 1}, {"from": "lexeme_6308", "to": "lexeme_6309", "width": 1}, {"from": "lexeme_4932", "to": "lexeme_4931", "width": 1}, {"from": "lexeme_7315", "to": "lexeme_2385", "width": 1}, {"from": "lexeme_4934", "to": "lexeme_4935", "width": 1}, {"from": "lexeme_4551", "to": "lexeme_2037", "width": 1}, {"from": "lexeme_5966", "to": "lexeme_8335", "width": 1}, {"from": "lexeme_4936", "to": "lexeme_4937", "width": 1}, {"from": "lexeme_1141", "to": "lexeme_1140", "width": 1}, {"from": "lexeme_1322", "to": "lexeme_2024", "width": 1}, {"from": "lexeme_4919", "to": "lexeme_4920", "width": 1}, {"from": "lexeme_6792", "to": "etymology_765", "width": 1}, {"from": "lexeme_6792", "to": "lexeme_1232", "width": 1}, {"from": "lexeme_1099", "to": "lexeme_1418", "width": 1}, {"from": "lexeme_2321", "to": "lexeme_1579", "width": 1}, {"from": "lexeme_93", "to": "lexeme_2103", "width": 1}, {"from": "lexeme_4552", "to": "lexeme_2972", "width": 1}, {"from": "lexeme_4542", "to": "lexeme_1232", "width": 1}, {"from": "lexeme_1149", "to": "lexeme_4643", "width": 1}, {"from": "lexeme_2428", "to": "lexeme_2427", "width": 1}, {"from": "lexeme_166", "to": "lexeme_1934", "width": 1}, {"from": "lexeme_166", "to": "lexeme_167", "width": 1}, {"from": "lexeme_1724", "to": "lexeme_1140", "width": 1}, {"from": "lexeme_2972", "to": "lexeme_3626", "width": 1}, {"from": "lexeme_1894", "to": "lexeme_208", "width": 1}, {"from": "lexeme_5034", "to": "lexeme_5035", "width": 1}, {"from": "lexeme_7317", "to": "lexeme_167", "width": 1}, {"from": "lexeme_4935", "to": "lexeme_4933", "width": 1}, {"from": "lexeme_7015", "to": "lexeme_2780", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
